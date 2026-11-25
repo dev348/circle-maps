@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Circle Maps</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: calm working tool for a live online conversation; the maps lead.
+   IDEA: ripples in a pond, one dropped from each seat a person sits in.
+   PICTURE: concentric-circle maps side by side, names placed on rings as they speak.
+   COLOUR and TYPE: forest green, pale leaf rings, warm sand chips; Inter Tight + Inter.
+   LAYOUT: session details bar, maps grid (2, optional 3rd), notes and actions at the foot. */
+:root{color-scheme:light dark;
+--bg:light-dark(#f4f7f3,#0f1d16);--ink:light-dark(#13271c,#e6efe8);--muted:light-dark(#4d6455,#9fb5a6);
+--g1:light-dark(#1f5a3a,#2f7a52);--card:light-dark(#ffffff,#152a1f);--line:light-dark(#cfdcd2,#2a4335);--accent:#e0a43a}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Inter,system-ui,sans-serif;overflow-x:clip}
+header{padding:20px max(4vw,16px) 6px}
+h1{font:700 clamp(24px,3vw,34px)/1.1 "Inter Tight",Inter,sans-serif;margin:0 0 4px;text-wrap:balance}
+.sub{color:var(--muted);font-size:14px;margin:0}
+.meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:10px max(4vw,16px)}
+.meta label{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+input,select,textarea{font:16px Inter,sans-serif;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);min-height:44px;width:100%}
+.maps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px;padding:8px max(4vw,16px)}
+.map{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.mh{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.map h2{font:600 18px/1.2 "Inter Tight",Inter,sans-serif;margin:0}
+.fig{position:relative;width:100%;aspect-ratio:1/1;max-height:60vh;margin:0 auto}
+.fig svg{position:absolute;inset:0;width:100%;height:100%}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+.row input{flex:1 1 150px;width:auto}.row select{width:auto}
+button{font:600 15px Inter,sans-serif;min-height:44px;padding:0 16px;border-radius:10px;border:0;background:var(--g1);color:#fff;cursor:pointer}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button.x{min-height:36px;padding:0 10px;font-size:13px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.chip:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.addmap{border:2px dashed var(--line);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px;text-align:center;min-height:200px}
+.addmap p{margin:0;color:var(--muted);font-size:14px;max-width:30ch}
+.notes{padding:8px max(4vw,16px) 28px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:end}
+.notes label{font:600 15px "Inter Tight",Inter,sans-serif;display:block;margin-bottom:6px}
+textarea{min-height:72px;line-height:1.5;resize:vertical}
+.acts{display:flex;flex-wrap:wrap;gap:8px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted);margin:6px 0 0}
+.legend b{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;color:#fff;font-size:12px;margin-right:4px;vertical-align:-3px}
+.pop{position:fixed;z-index:10;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;box-shadow:0 8px 28px rgba(0,0,0,.18);width:min(280px,92vw);display:grid;gap:8px}
+.pop[hidden]{display:none}.pop p{margin:0;font-weight:600;font-size:14px;overflow-wrap:anywhere}
+.pop .g{display:flex;flex-wrap:wrap;gap:6px}.pop .g span{width:100%;font-size:12px;color:var(--muted)}
+.pop button{min-height:38px;padding:0 10px;font-size:14px}.pop button.on{background:var(--g1);color:#fff;border-color:var(--g1)}
+.ref{padding:0 max(4vw,16px) 32px}
+.ref details{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+.ref summary{font:600 16px "Inter Tight",Inter,sans-serif;cursor:pointer;min-height:32px;display:flex;align-items:center}
+.ref h3{font:600 14px Inter,sans-serif;color:var(--muted);margin:14px 0 6px}
+.ref .chips{display:flex;flex-wrap:wrap;gap:6px}
+.ref .chips button{min-height:36px;padding:0 12px;font-size:14px;font-weight:500;background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:999px}
+.after{font-size:13px;color:var(--muted);margin:6px 0 0;width:100%}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--g1);color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw}
+.toast.on{opacity:1}
+@media(max-width:760px){.meta{grid-template-columns:repeat(2,minmax(0,1fr))}.notes{grid-template-columns:minmax(0,1fr)}}
+@media(prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Circle maps</h1>
+  <p class="sub">Circle 1 is closest. Type their words, pick a circle, add. Click a name to tag, move or remove it.</p>
+  <p class="legend"><span><b style="background:#2f8f4e">+</b>Gives energy</span><span><b style="background:#c0392b">−</b>Takes energy</span><span><b style="background:#c27c0e">±</b>Both</span><span>Optional. Use only when they bring it up.</span></p>
+</header>
+
+<section class="meta" aria-label="Session details">
+  <label>Talking with<input id="m-name" type="text" placeholder="e.g. Simrita"></label>
+  <label>Date<input id="m-date" type="date"></label>
+  <label>Time<input id="m-time" type="time"></label>
+  <label>Location<input id="m-loc" type="text" placeholder="e.g. Google Meet"></label>
+</section>
+
+<main class="maps" id="maps"></main>
+
+<section class="notes">
+  <div>
+    <label for="notice">Looking at the maps, what do you notice?</label>
+    <textarea id="notice" placeholder="Their words go here"></textarea>
+  </div>
+  <div class="acts">
+    <button type="button" id="pdf" hidden>Save as PDF</button>
+    <button type="button" class="ghost" id="copy">Copy as text</button>
+    <button type="button" class="ghost" id="undo">Undo</button>
+    <button type="button" class="ghost" id="clear">Clear all</button>
+    <p class="after">After the call: save the PDF and send them a copy.</p>
+  </div>
+</section>
+<section class="ref">
+  <details>
+    <summary>Stakeholder list, for reference</summary>
+    <p class="hint">Keep this closed while sharing your screen, so the list doesn't lead their answers. From Nami's maps (v4, v5) and Sakshi's map. Click a name to drop it into the last map you typed in. Use their words if they name it differently.</p>
+    <div id="refs"></div>
+  </details>
+</section>
+<div class="pop" id="pop" hidden role="dialog" aria-label="Edit name"></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+{
+const KEY='circleMaps.v2';
+const PAL={
+  light:{r:['#8fb89c','#d7e6da','#8fb89c','#d7e6da'],line:'#cfdcd2',muted:'#4d6455',core:'#1f5a3a',chip:'#fff6e4',chipInk:'#4a3510',accent:'#e0a43a'},
+  dark:{r:['#2c4d3b','#1d3428','#2c4d3b','#1d3428'],line:'#2a4335',muted:'#9fb5a6',core:'#2f7a52',chip:'#3b3220',chipInk:'#f3e2bd',accent:'#e0a43a'}
+};
+const TAGS={h:{label:'gives energy',sym:'+',col:'#2f8f4e'},b:{label:'takes energy',sym:'−',col:'#c0392b'},x:{label:'both',sym:'±',col:'#c27c0e'}};
+const DEF=[
+  {key:'bric',title:'Bricoleur at the centre',centre:'Bricoleur',q:'"As a bricoleur, who is closest to you in this work? Who supports you? Who do you depend on?"'},
+  {key:'stu',title:'Student at the centre',centre:'Student',q:'"For a student, who is closest to them? Who shapes their day the most? Whose opinion matters most to them?"'},
+  {key:'role',title:'Other role at the centre',centre:'',q:'"Now from your other role. Who is closest? Who moves closer or further than on the bricoleur map?"'}
+];
+const today=new Date();const pad=n=>String(n).padStart(2,'0');
+const fresh=()=>{const d=new Date();return {meta:{name:'',date:`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`,time:`${pad(d.getHours())}:${pad(d.getMinutes())}`,loc:'Google Meet'},
+  maps:{bric:{centre:'Bricoleur',items:[]},stu:{centre:'Student',items:[]},role:{centre:'',items:[],on:false}},notice:''}};
+let state=fresh();
+try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&s.maps&&s.meta)state=s;}catch(e){}
+const hist=[];
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}};
+const snap=()=>{hist.push(JSON.stringify(state));if(hist.length>50)hist.shift()};
+const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const isDark=()=>{const t=document.documentElement.dataset.theme;return t?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches};
+const toast=m=>{const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('on'),2200)};
+
+function svgFor(key,W,H,p,interactive){
+  const m=state.maps[key],cx=W/2,cy=H/2,R=Math.min(W,H)/2-4;
+  const radii=[R*0.42,R*0.62,R*0.81,R],core=R*0.17,small=W<360;
+  let h='';
+  for(let i=3;i>=0;i--)h+=`<circle cx="${cx}" cy="${cy}" r="${radii[i]}" fill="${p.r[i]}" stroke="${p.line}"/>`;
+  const placed=[];
+  for(let i=0;i<4;i++){const y=cy-radii[i]+14;h+=`<text x="${cx}" y="${y}" text-anchor="middle" font-family="Inter,Helvetica,Arial,sans-serif" font-size="${small?10:11}" fill="${p.muted}">Circle ${i+1}</text>`;placed.push({x:cx-24,y:y-11,w:48,h:14})}
+  h+=`<circle cx="${cx}" cy="${cy}" r="${core}" fill="${p.core}"/>`;
+  placed.push({x:cx-core,y:cy-core,w:core*2,h:core*2});
+  const label=(m.centre||DEF.find(d=>d.key===key).centre||'Role').trim();
+  const parts=label.split('+').map(s=>s.trim()).filter(Boolean).slice(0,2);
+  const cfs=small?9.5:(parts.length>1?10.5:13);
+  parts.forEach((t,k)=>{t=t.length>10?t.slice(0,9)+'…':t;h+=`<text x="${cx}" y="${cy+4+(k-(parts.length-1)/2)*(cfs+3)}" text-anchor="middle" font-family="Inter,Helvetica,Arial,sans-serif" font-size="${cfs}" font-weight="600" fill="#fff">${esc(k?'+ '+t:t)}</text>`});
+  const fs=small?11:12.5,hit=(a,b)=>a.x<b.x+b.w+3&&b.x<a.x+a.w+3&&a.y<b.y+b.h+3&&b.y<a.y+a.h+3;
+  for(let c=1;c<=4;c++){
+    const items=m.items.map((it,idx)=>({...it,idx})).filter(it=>it.c===c),n=items.length;
+    const inner=c===1?core:radii[c-2],band=radii[c-1]-inner,mid=inner+band/2;
+    const rads=[0,-0.22,0.22,0.4,-0.35,0.6,0.8].map(k=>mid+band*k);
+    items.forEach((it,j)=>{
+      const lab=it.n.length>18?it.n.slice(0,17)+'…':it.n,tg=TAGS[it.t],w=lab.length*fs*0.58+16+(tg?fs*1.3:0),hh=fs*2;
+      const base=-Math.PI/2+(Math.PI*2*(j+0.5))/Math.max(n,1)+(c%2?0.3:0);
+      let best=null;
+      outer:for(const rr of rads){
+        for(let step=0;step<48;step++){
+        const da=(step%2?1:-1)*Math.ceil(step/2)*(Math.PI/24);
+          const a=base+da,x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr,box={x:x-w/2,y:y-hh/2,w,h:hh};
+          if(!placed.some(b=>hit(box,b))){best={x,y,box};break outer}
+        }
+      }
+      if(!best){const x=cx+Math.cos(base)*mid,y=cy+Math.sin(base)*mid;best={x,y,box:{x:x-w/2,y:y-hh/2,w,h:hh}}}
+      placed.push(best.box);
+      const {x,y}=best;
+      h+=`<g ${interactive?`class="chip" data-i="${it.idx}" tabindex="0" role="button" aria-label="Edit ${esc(it.n)}" style="cursor:pointer"`:''}>${interactive?`<title>${esc(it.n)}${tg?' ('+tg.label+')':''}. Click to tag, move or remove</title>`:''}<rect x="${x-w/2}" y="${y-fs}" width="${w}" height="${hh}" rx="${fs}" fill="${p.chip}" stroke="${tg?tg.col:p.accent}" stroke-width="${tg?1.6:1}"/>${tg?`<circle cx="${x-w/2+fs*0.95}" cy="${y}" r="${fs*0.62}" fill="${tg.col}"/><text x="${x-w/2+fs*0.95}" y="${y+fs*0.36}" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="${fs}" font-weight="700" fill="#fff">${tg.sym}</text>`:''}<text x="${x+(tg?fs*0.65:0)}" y="${y+fs*0.36}" text-anchor="middle" font-family="Inter,Helvetica,Arial,sans-serif" font-size="${fs}" font-weight="500" fill="${p.chipInk}">${esc(lab)}</text></g>`;
+    });
+  }
+  return h;
+}
+function draw(key){
+  const svg=document.querySelector(`.map[data-key="${key}"] svg`);if(!svg)return;
+  const W=svg.clientWidth||400,H=svg.clientHeight||400;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  svg.innerHTML=svgFor(key,W,H,isDark()?PAL.dark:PAL.light,true);
+  svg.querySelectorAll('.chip').forEach(g=>{
+    const open=()=>openPop(key,+g.dataset.i,g);
+    g.addEventListener('click',open);
+    g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open()}});
+  });
+}
+const REF=[
+  ['Core map: student at the centre (v5)',['Bricoleurs','Peers / batchmates','Family and friends','Faculty','Practitioners from the field','Admin / Ops team','Placement team','Counsellors','Other ISDM teams (WoB, SCB, GKH)','External mentors']],
+  ['Within the batch',['PLCs','SAC','HCC','Non-SAC','Placement committee','Course committees']],
+  ['Academic',['Visiting faculty','Bric fellows','Programme director','Dean / Academic Council','Founding team','Curriculum and pedagogy (C&P)','PMDL','WID','CBCL']],
+  ['Programme and operations',['Student engagement','Library','LMS','Admin and IT / Tech team','Finance and accounts','Admission team','Hostel coordinator']],
+  ['Support',['ICC / POSH']],
+  ['RI and field',['RI SPOCs','RI field partners']],
+  ['Beyond ISDM',['Alums (incl. Batch 9)','Alumni communication team','Recruiters','Govt. of UP']],
+  ['Spaces, for notes (not stakeholders)',['Tea stall','Hostel','Mess','Terrace','Corridors','PLC rooms','Big classroom','Majlis','Sahyog','Guftagu','Vimukt','Aman','Unnati','Nyay']],
+  ['People who sit with a space',['Chaiwala','Mess staff','Security']]
+];
+let lastKey='bric';
+document.getElementById('refs').innerHTML=REF.map(([g,l])=>`<h3>${g}</h3><div class="chips">${l.map(n=>`<button type="button" data-ref="${esc(n)}">${esc(n)}</button>`).join('')}</div>`).join('');
+document.getElementById('refs').addEventListener('click',e=>{const b=e.target.closest('[data-ref]');if(!b)return;
+  const k=active().some(d=>d.key===lastKey)?lastKey:'bric';const inp=document.querySelector(`.map[data-key="${k}"] form input`);
+  inp.value=b.dataset.ref;inp.focus();toast('Added to the box. Pick a circle, then Add')});
+const pop=document.getElementById('pop');let popFor=null;
+function closePop(){pop.hidden=true;if(popFor){const el=document.querySelector(`.map[data-key="${popFor.key}"] .chip[data-i="${popFor.i}"]`);el&&el.focus()}popFor=null}
+function openPop(key,i,anchor){
+  const it=state.maps[key].items[i];if(!it)return;popFor={key,i};
+  const tb=(v,l)=>`<button type="button" class="ghost${(it.t||'')===v?' on':''}" data-t="${v}">${l}</button>`;
+  pop.innerHTML=`<p></p><div class="g"><span>Energy (optional)</span>${tb('h','+ Gives energy')}${tb('b','− Takes energy')}${tb('x','± Both')}${tb('','No tag')}</div>
+    <div class="g"><span>Move to</span>${[1,2,3,4].map(c=>`<button type="button" class="ghost${it.c===c?' on':''}" data-c="${c}">${c}</button>`).join('')}</div>
+    <div class="g"><button type="button" class="ghost" data-rm>Remove</button><button type="button" class="ghost" data-close>Done</button></div>`;
+  pop.querySelector('p').textContent=it.n;
+  pop.hidden=false;
+  const r=anchor.getBoundingClientRect(),pw=pop.offsetWidth,ph=pop.offsetHeight;
+  let left=Math.min(Math.max(8,r.left+r.width/2-pw/2),innerWidth-pw-8),top=r.bottom+8;
+  if(top+ph>innerHeight-8)top=Math.max(8,r.top-ph-8);
+  pop.style.left=left+'px';pop.style.top=top+'px';
+  pop.querySelectorAll('[data-t]').forEach(b=>b.addEventListener('click',()=>{snap();it.t=b.dataset.t||undefined;save();draw(key);openPop(key,i,document.querySelector(`.map[data-key="${key}"] .chip[data-i="${i}"]`)||anchor)}));
+  pop.querySelectorAll('[data-c]').forEach(b=>b.addEventListener('click',()=>{snap();it.c=+b.dataset.c;save();draw(key);openPop(key,i,document.querySelector(`.map[data-key="${key}"] .chip[data-i="${i}"]`)||anchor)}));
+  pop.querySelector('[data-rm]').addEventListener('click',()=>{snap();state.maps[key].items.splice(i,1);save();popFor=null;pop.hidden=true;draw(key);toast('Removed. Undo brings it back')});
+  pop.querySelector('[data-close]').addEventListener('click',closePop);
+  pop.querySelector('button.on,button')?.focus();
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!pop.hidden)closePop()});
+document.addEventListener('pointerdown',e=>{if(!pop.hidden&&!pop.contains(e.target)&&!e.target.closest('.chip'))closePop()});
+const active=()=>DEF.filter(d=>d.key!=='role'||state.maps.role.on);
+const drawAll=()=>active().forEach(d=>draw(d.key));
+
+function build(){
+  const box=document.getElementById('maps');
+  let h=active().map((d,i)=>`<section class="map" data-key="${d.key}">
+    <div class="mh"><h2>${i+1}. ${d.title}</h2>${d.key==='role'?'<button type="button" class="ghost x" data-rm-map>Remove map</button>':''}</div>
+    ${d.key!=='stu'?`<div class="row"><input type="text" data-centre aria-label="Centre role for ${d.title}" placeholder="${d.key==='bric'?'Centre, e.g. Bricoleur + CBCL faculty':'Centre, e.g. CBCL faculty or Programme'}"></div>`:''}
+    <div class="fig"><svg role="img" aria-label="${d.title} circle map"></svg></div>
+    <form class="row"><input type="text" aria-label="Stakeholder for ${d.title}" placeholder="Who? e.g. ${d.key==='stu'?'PLC peers':'Co-bricoleurs'}">
+      <select aria-label="Circle" data-circ><option value="1">Circle 1</option><option value="2">Circle 2</option><option value="3">Circle 3</option><option value="4">Circle 4</option></select>
+      <select aria-label="Energy tag, optional" data-tag><option value="">No tag</option><option value="h">+ Gives energy</option><option value="b">− Takes energy</option><option value="x">± Both</option></select>
+      <button type="submit">Add</button></form>
+    <p class="hint">${d.q}</p></section>`).join('');
+  if(!state.maps.role.on)h+=`<div class="addmap"><button type="button" class="ghost" id="addrole">+ Add a role map</button><p>Optional. For someone with a second role, like CBCL faculty or programme manager.</p></div>`;
+  box.innerHTML=h;
+  box.querySelectorAll('.map').forEach(sec=>{
+    const key=sec.dataset.key,f=sec.querySelector('form'),inp=f.querySelector('input'),sel=f.querySelector('[data-circ]'),tsel=f.querySelector('[data-tag]'),ci=sec.querySelector('[data-centre]');
+    if(ci){ci.value=state.maps[key].centre||'';ci.addEventListener('input',()=>{state.maps[key].centre=ci.value;save();draw(key)})}
+    inp.addEventListener('focus',()=>{lastKey=key});
+    f.addEventListener('submit',e=>{e.preventDefault();const n=inp.value.trim();if(!n)return;snap();const o={n,c:+sel.value};if(tsel.value)o.t=tsel.value;state.maps[key].items.push(o);save();draw(key);inp.value='';tsel.value='';inp.focus()});
+  });
+  const ar=document.getElementById('addrole');
+  if(ar)ar.addEventListener('click',()=>{snap();state.maps.role.on=true;save();build();document.querySelector('.map[data-key="role"] [data-centre]')?.focus()});
+  box.querySelector('[data-rm-map]')?.addEventListener('click',()=>{snap();state.maps.role={centre:'',items:[],on:false};save();build();toast('Map removed. Undo brings it back')});
+  observe();drawAll();
+}
+const ro=new ResizeObserver(()=>drawAll());
+function observe(){ro.disconnect();document.querySelectorAll('.fig').forEach(f=>ro.observe(f))}
+
+const metaIds={name:'m-name',date:'m-date',time:'m-time',loc:'m-loc'};
+const notice=document.getElementById('notice');
+function fillFields(){for(const k in metaIds)document.getElementById(metaIds[k]).value=state.meta[k]||'';notice.value=state.notice||''}
+for(const k in metaIds)document.getElementById(metaIds[k]).addEventListener('input',e=>{state.meta[k]=e.target.value;save()});
+notice.addEventListener('input',()=>{state.notice=notice.value;save()});
+
+const listText=key=>[1,2,3,4].map(c=>`Circle ${c}: `+(state.maps[key].items.filter(i=>i.c===c).map(i=>i.n+(TAGS[i.t]?` (${TAGS[i.t].label})`:'')).join(', ')||'-'));
+const centreOf=k=>state.maps[k].centre||DEF.find(d=>d.key===k).centre||'Other role';
+const tags={bric:'MAP-B',stu:'MAP-S',role:'MAP-R'};
+document.getElementById('copy').addEventListener('click',async()=>{
+  const M=state.meta;
+  let t=`With: ${M.name||'-'} | Date: ${M.date||'-'} | Time: ${M.time||'-'} | Location: ${M.loc||'-'}\n`;
+  active().forEach(d=>{t+=`\n${tags[d.key]} (${centreOf(d.key)} at centre)\n${listText(d.key).join('\n')}\n`});
+  t+=`\nWhat they noticed:\n${state.notice||'-'}`;
+  try{await navigator.clipboard.writeText(t);toast('Copied. Paste into your sheet')}catch(e){toast('Copy blocked. Select the text and copy by hand')}
+});
+document.getElementById('undo').addEventListener('click',()=>{const p=hist.pop();if(!p){toast('Nothing to undo');return}state=JSON.parse(p);save();fillFields();build()});
+document.getElementById('clear').addEventListener('click',()=>{snap();state=fresh();save();fillFields();build();toast('Cleared. Undo brings it back')});
+
+function svgToPng(key,size){
+  return new Promise((res,rej)=>{
+    const s=`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${svgFor(key,size,size,PAL.light,false)}</svg>`;
+    const img=new Image();
+    img.onload=()=>{const c=document.createElement('canvas');c.width=size*2;c.height=size*2;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',0.88))};
+    img.onerror=rej;img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s);
+  });
+}
+async function makePdf(){/*pdf*/
+  const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4',compress:true});
+  const PW=297,PH=210,M=12,G=[31,90,58];const meta=state.meta;
+  doc.setFont('helvetica','bold');doc.setFontSize(17);doc.setTextColor(19,39,28);doc.text('Circle maps',M,M+4);
+  doc.setFont('helvetica','normal');doc.setFontSize(10.5);doc.setTextColor(77,100,85);
+  const line=`With: ${meta.name||'-'}     Date: ${meta.date||'-'}     Time: ${meta.time||'-'}     Location: ${meta.loc||'-'}`;
+  doc.text(line,M,M+11);doc.setFontSize(9);doc.text('Energy: + gives   - takes   +/- both',PW-M,M+11,{align:'right'});doc.setFontSize(10.5);doc.setDrawColor(...G);doc.setLineWidth(0.4);doc.line(M,M+14,PW-M,M+14);
+  const maps=active(),n=maps.length,gap=8,colW=(PW-2*M-gap*(n-1))/n,img=Math.min(colW,n===3?84:112);
+  let maxY=0;
+  for(let i=0;i<n;i++){
+    const d=maps[i],x=M+i*(colW+gap),y0=M+21;
+    doc.setFont('helvetica','bold');doc.setFontSize(11.5);doc.setTextColor(...G);
+    doc.text(`${i+1}. ${centreOf(d.key)} at the centre`,x,y0);
+    const png=await svgToPng(d.key,520);
+    doc.addImage(png,'JPEG',x+(colW-img)/2,y0+3,img,img,undefined,'FAST');
+    let y=y0+img+9;doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(19,39,28);
+    listText(d.key).forEach(l=>{const w=doc.splitTextToSize(l,colW);doc.text(w,x,y);y+=w.length*4.6});
+    maxY=Math.max(maxY,y);
+  }
+  let y=Math.min(maxY+5,PH-28);
+  doc.setFont('helvetica','bold');doc.setFontSize(10.5);doc.setTextColor(...G);doc.text('What they noticed',M,y);
+  doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(19,39,28);
+  const nl=doc.splitTextToSize(state.notice||'-',PW-2*M);doc.text(nl.slice(0,Math.max(1,Math.floor((PH-y-8)/4.6))),M,y+5);
+  return doc.output('blob');
+}
+const pdfBtn=document.getElementById('pdf');
+const safe=s=>String(s||'').replace(/[\\/:*?"<>|]+/g,' ').trim();
+const fileName=()=>`Circle maps - ${safe(state.meta.name)||'Bricoleur'} - ${safe(state.meta.date)||'date'}.pdf`;
+function wirePdf(saveFn){
+  if(!window.jspdf||pdfBtn.dataset.wired)return;
+  pdfBtn.dataset.wired='1';pdfBtn.hidden=false;
+  pdfBtn.addEventListener('click',async()=>{
+    pdfBtn.disabled=true;
+    try{await saveFn(await makePdf(),fileName());toast('PDF saved. Send them a copy')}
+    catch(e){const c=e&&e.code;toast(c==='declined'?'Save cancelled':c==='rate_limited'?'Another save is open. Try again in a moment':'Could not save the PDF here. Use Copy as text')}
+    finally{pdfBtn.disabled=false}
+  });
+}
+const plainSave=async(blob,fn)=>{const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=fn;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)};
+if(window.claude&&typeof window.claude.use==='function'){
+  window.claude.use('downloads').then(dl=>{if(dl)wirePdf((blob,fn)=>dl.save({filename:fn,data:blob}))}).catch(()=>{});
+}else{
+  wirePdf(plainSave);
+}
+
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',drawAll);
+new MutationObserver(drawAll).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+fillFields();build();
+}
+</script>
+</body>
+</html>
