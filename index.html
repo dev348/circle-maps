@@ -154,20 +154,17 @@ function svgFor(key,W,H,p,interactive){
     const inner=c===1?core:radii[c-2],band=radii[c-1]-inner,mid=inner+band/2;
     const rads=[0,-0.22,0.22,0.4,-0.35,0.6,0.8].map(k=>mid+band*k);
     items.forEach((it,j)=>{
-      const lab=it.n.length>18?it.n.slice(0,17)+'…':it.n,tg=TAGS[it.t],w=lab.length*fs*0.58+16+(tg?fs*1.3:0),hh=fs*2;
-      const base=-Math.PI/2+(Math.PI*2*(j+0.5))/Math.max(n,1)+(c%2?0.3:0);
-      let best=null;
-      outer:for(const rr of rads){
-        for(let step=0;step<48;step++){
-        const da=(step%2?1:-1)*Math.ceil(step/2)*(Math.PI/24);
-          const a=base+da,x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr,box={x:x-w/2,y:y-hh/2,w,h:hh};
-          if(!placed.some(b=>hit(box,b))){best={x,y,box};break outer}
-        }
-      }
-      if(!best){const x=cx+Math.cos(base)*mid,y=cy+Math.sin(base)*mid;best={x,y,box:{x:x-w/2,y:y-hh/2,w,h:hh}}}
+      const tg=TAGS[it.t],base=-Math.PI/2+(Math.PI*2*(j+0.5))/Math.max(n,1)+(c%2?0.3:0);
+      const fit=(k,maxLen)=>{const f=fs*k,lab=it.n.length>maxLen?it.n.slice(0,maxLen-1)+'…':it.n;return {f,lab,w:lab.length*f*0.58+14*k+(tg?f*1.3:0),hh:f*2}};
+      const tryPlace=(spec,ks)=>{for(const k of ks){const rr=mid+band*k;for(let step=0;step<72;step++){const da=(step%2?1:-1)*Math.ceil(step/2)*(Math.PI/36);const a=base+da,x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr,box={x:x-spec.w/2,y:y-spec.hh/2,w:spec.w,h:spec.hh};if(!placed.some(q=>hit(box,q)))return {x,y,box}}}return null};
+      let spec,best=null;
+      for(const [k,ml] of [[1,18],[0.85,16],[0.72,13]]){spec=fit(k,ml);const lim=Math.max(0,(band-spec.hh)/2/band);best=tryPlace(spec,[0,-lim,lim,-lim/2,lim/2]);if(best)break}
+      if(!best){spec=fit(0.72,13);best=tryPlace(spec,[0.45,-0.45,0.6,0.8])}
+      if(!best){const x=cx+Math.cos(base)*mid,y=cy+Math.sin(base)*mid;best={x,y,box:{x:x-spec.w/2,y:y-spec.hh/2,w:spec.w,h:spec.hh}}}
+      const lab=spec.lab,w=spec.w,hh=spec.hh,f0=spec.f;
       placed.push(best.box);
       const {x,y}=best;
-      h+=`<g ${interactive?`class="chip" data-i="${it.idx}" tabindex="0" role="button" aria-label="Edit ${esc(it.n)}" style="cursor:pointer"`:''}>${interactive?`<title>${esc(it.n)}${tg?' ('+tg.label+')':''}. Click to tag, move or remove</title>`:''}<rect x="${x-w/2}" y="${y-fs}" width="${w}" height="${hh}" rx="${fs}" fill="${p.chip}" stroke="${tg?tg.col:p.accent}" stroke-width="${tg?1.6:1}"/>${tg?`<circle cx="${x-w/2+fs*0.95}" cy="${y}" r="${fs*0.62}" fill="${tg.col}"/><text x="${x-w/2+fs*0.95}" y="${y+fs*0.36}" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="${fs}" font-weight="700" fill="#fff">${tg.sym}</text>`:''}<text x="${x+(tg?fs*0.65:0)}" y="${y+fs*0.36}" text-anchor="middle" font-family="Inter,Helvetica,Arial,sans-serif" font-size="${fs}" font-weight="500" fill="${p.chipInk}">${esc(lab)}</text></g>`;
+      h+=`<g ${interactive?`class="chip" data-i="${it.idx}" tabindex="0" role="button" aria-label="Edit ${esc(it.n)}" style="cursor:pointer"`:''}>${interactive?`<title>${esc(it.n)}${tg?' ('+tg.label+')':''}. Click to tag, move or remove</title>`:''}<rect x="${x-w/2}" y="${y-f0}" width="${w}" height="${hh}" rx="${f0}" fill="${p.chip}" stroke="${tg?tg.col:p.accent}" stroke-width="${tg?1.6:1}"/>${tg?`<circle cx="${x-w/2+f0*0.95}" cy="${y}" r="${f0*0.62}" fill="${tg.col}"/><text x="${x-w/2+f0*0.95}" y="${y+f0*0.36}" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="${f0}" font-weight="700" fill="#fff">${tg.sym}</text>`:''}<text x="${x+(tg?f0*0.65:0)}" y="${y+f0*0.36}" text-anchor="middle" font-family="Inter,Helvetica,Arial,sans-serif" font-size="${f0}" font-weight="500" fill="${p.chipInk}">${esc(lab)}</text></g>`;
     });
   }
   return h;
