@@ -45,6 +45,7 @@ textarea{min-height:72px;line-height:1.5;resize:vertical}
 .acts{display:flex;flex-wrap:wrap;gap:8px}
 .legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted);margin:6px 0 0}
 .legend b{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;color:#fff;font-size:12px;margin-right:4px;vertical-align:-3px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .pop{position:fixed;z-index:10;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;box-shadow:0 8px 28px rgba(0,0,0,.18);width:min(280px,92vw);display:grid;gap:8px}
 .pop[hidden]{display:none}.pop p{margin:0;font-weight:600;font-size:14px;overflow-wrap:anywhere}
 .pop .g{display:flex;flex-wrap:wrap;gap:6px}.pop .g span{width:100%;font-size:12px;color:var(--muted)}
@@ -55,6 +56,11 @@ textarea{min-height:72px;line-height:1.5;resize:vertical}
 .ref h3{font:600 14px Inter,sans-serif;color:var(--muted);margin:14px 0 6px}
 .ref .chips{display:flex;flex-wrap:wrap;gap:6px}
 .ref .chips button{min-height:36px;padding:0 12px;font-size:14px;font-weight:500;background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:999px}
+.lv summary{cursor:pointer;font-size:14px;color:var(--muted);min-height:32px;display:flex;align-items:center}
+.lv h3{font:600 13px Inter,sans-serif;color:var(--muted);margin:8px 0 4px}
+.lv ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.lv li button{min-height:44px;font-weight:500;background:transparent;color:var(--ink);border:1px solid var(--line)}
+.lv .none{font-size:13px;color:var(--muted);margin:0}
 .after{font-size:13px;color:var(--muted);margin:6px 0 0;width:100%}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--g1);color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw}
 .toast.on{opacity:1}
@@ -69,19 +75,20 @@ textarea{min-height:72px;line-height:1.5;resize:vertical}
   <p class="legend"><span><b style="background:#2f8f4e">+</b>Gives energy</span><span><b style="background:#c0392b">−</b>Takes energy</span><span><b style="background:#c27c0e">±</b>Both</span><span>Optional. Use only when they bring it up.</span></p>
 </header>
 
+<main>
 <section class="meta" aria-label="Session details">
-  <label>Talking with<input id="m-name" type="text" placeholder="e.g. Simrita"></label>
+  <label>Talking with<input id="m-name" type="text" dir="auto" placeholder="e.g. Simrita"></label>
   <label>Date<input id="m-date" type="date"></label>
   <label>Time<input id="m-time" type="time"></label>
-  <label>Location<input id="m-loc" type="text" placeholder="e.g. Google Meet"></label>
+  <label>Location<input id="m-loc" type="text" dir="auto" placeholder="e.g. Google Meet"></label>
 </section>
 
-<main class="maps" id="maps"></main>
+<div class="maps" id="maps"></div>
 
 <section class="notes">
   <div>
     <label for="notice">Looking at the maps, what do you notice?</label>
-    <textarea id="notice" placeholder="Their words go here"></textarea>
+    <textarea id="notice" dir="auto" placeholder="Their words go here"></textarea>
   </div>
   <div class="acts">
     <button type="button" id="pdf" hidden>Save as PDF</button>
@@ -98,6 +105,7 @@ textarea{min-height:72px;line-height:1.5;resize:vertical}
     <div id="refs"></div>
   </details>
 </section>
+</main>
 <div class="pop" id="pop" hidden role="dialog" aria-label="Edit name"></div>
 <div class="toast" id="toast" role="status"></div>
 
@@ -174,15 +182,21 @@ function draw(key){
     g.addEventListener('click',open);
     g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open()}});
   });
+  const lv=document.querySelector(`.map[data-key="${key}"] [data-list]`);
+  if(lv){
+    const items=state.maps[key].items.map((it,idx)=>({...it,idx}));
+    lv.innerHTML=items.length?[1,2,3,4].map(c=>{const l=items.filter(it=>it.c===c);return `<h3>Circle ${c}</h3>`+(l.length?`<ul>${l.map(it=>`<li><button type="button" data-li="${it.idx}" dir="auto">${TAGS[it.t]?TAGS[it.t].sym+' ':''}${esc(it.n)}${TAGS[it.t]?`<span class="sr"> (${TAGS[it.t].label})</span>`:''}</button></li>`).join('')}</ul>`:'<p class="none">No one yet</p>')}).join(''):'<p class="none">No names yet</p>';
+    lv.querySelectorAll('[data-li]').forEach(b=>b.addEventListener('click',()=>openPop(key,+b.dataset.li,b)));
+  }
 }
 const REF=[
   ['Core map: student at the centre (v5)',['Bricoleurs','Peers / batchmates','Family and friends','Faculty','Practitioners from the field','Admin / Ops team','Placement team','Counsellors','Other ISDM teams (WoB, SCB, GKH)','External mentors']],
   ['Within the batch',['PLCs','SAC','HCC','Non-SAC','Placement committee','Course committees']],
   ['Academic',['Visiting faculty','Bric fellows','Programme director','Dean / Academic Council','Founding team','Curriculum and pedagogy (C&P)','PMDL','WID','CBCL']],
   ['Programme and operations',['Student engagement','Library','LMS','Admin and IT / Tech team','Finance and accounts','Admission team','Hostel coordinator']],
-  ['Support',['ICC / POSH']],
+  ['Support',['ICC / POSH','Accessibility support','Peer support group','Peers who translate']],
   ['RI and field',['RI SPOCs','RI field partners']],
-  ['Beyond ISDM',['Alums (incl. Batch 9)','Alumni communication team','Recruiters','Govt. of UP']],
+  ['Beyond ISDM',['Partner or spouse','Children or dependents','Home community','Faith or spiritual community','Employer or past workplace','Alums (incl. Batch 9)','Alumni communication team','Recruiters','Govt. of UP']],
   ['Spaces, for notes (not stakeholders)',['Tea stall','Hostel','Mess','Terrace','Corridors','PLC rooms','Big classroom','Majlis','Sahyog','Guftagu','Vimukt','Aman','Unnati','Nyay']],
   ['People who sit with a space',['Chaiwala','Mess staff','Security']]
 ];
@@ -199,7 +213,7 @@ function openPop(key,i,anchor){
   pop.innerHTML=`<p></p><div class="g"><span>Energy (optional)</span>${tb('h','+ Gives energy')}${tb('b','− Takes energy')}${tb('x','± Both')}${tb('','No tag')}</div>
     <div class="g"><span>Move to</span>${[1,2,3,4].map(c=>`<button type="button" class="ghost${it.c===c?' on':''}" data-c="${c}">${c}</button>`).join('')}</div>
     <div class="g"><button type="button" class="ghost" data-rm>Remove</button><button type="button" class="ghost" data-close>Done</button></div>`;
-  pop.querySelector('p').textContent=it.n;
+  const pp=pop.querySelector('p');pp.textContent=it.n;pp.dir='auto';
   pop.hidden=false;
   const r=anchor.getBoundingClientRect(),pw=pop.offsetWidth,ph=pop.offsetHeight;
   let left=Math.min(Math.max(8,r.left+r.width/2-pw/2),innerWidth-pw-8),top=r.bottom+8;
@@ -220,9 +234,10 @@ function build(){
   const box=document.getElementById('maps');
   let h=active().map((d,i)=>`<section class="map" data-key="${d.key}">
     <div class="mh"><h2>${i+1}. ${d.title}</h2>${d.key==='role'?'<button type="button" class="ghost x" data-rm-map>Remove map</button>':''}</div>
-    ${d.key!=='stu'?`<div class="row"><input type="text" data-centre aria-label="Centre role for ${d.title}" placeholder="${d.key==='bric'?'Centre, e.g. Bricoleur + CBCL faculty':'Centre, e.g. CBCL faculty or Programme'}"></div>`:''}
-    <div class="fig"><svg role="img" aria-label="${d.title} circle map"></svg></div>
-    <form class="row"><input type="text" aria-label="Stakeholder for ${d.title}" placeholder="Who? e.g. ${d.key==='stu'?'PLC peers':'Co-bricoleurs'}">
+    ${d.key!=='stu'?`<div class="row"><input type="text" dir="auto" data-centre aria-label="Centre role for ${d.title}" placeholder="${d.key==='bric'?'Centre, e.g. Bricoleur + CBCL faculty':'Centre, e.g. CBCL faculty or Programme'}"></div>`:''}
+    <div class="fig"><svg role="group" aria-label="${d.title} circle map. Each name is a button."></svg></div>
+    <details class="lv"><summary>List view</summary><div data-list></div></details>
+    <form class="row"><input type="text" dir="auto" aria-label="Stakeholder for ${d.title}" placeholder="Who? e.g. ${d.key==='stu'?'PLC peers':'Co-bricoleurs'}">
       <select aria-label="Circle" data-circ><option value="1">Circle 1</option><option value="2">Circle 2</option><option value="3">Circle 3</option><option value="4">Circle 4</option></select>
       <select aria-label="Energy tag, optional" data-tag><option value="">No tag</option><option value="h">+ Gives energy</option><option value="b">− Takes energy</option><option value="x">± Both</option></select>
       <button type="submit">Add</button></form>
@@ -262,37 +277,43 @@ document.getElementById('copy').addEventListener('click',async()=>{
 document.getElementById('undo').addEventListener('click',()=>{const p=hist.pop();if(!p){toast('Nothing to undo');return}state=JSON.parse(p);save();fillFields();build()});
 document.getElementById('clear').addEventListener('click',()=>{snap();state=fresh();save();fillFields();build();toast('Cleared. Undo brings it back')});
 
-function svgToPng(key,size){
+function svgImage(key,size){
   return new Promise((res,rej)=>{
-    const s=`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${svgFor(key,size,size,PAL.light,false)}</svg>`;
-    const img=new Image();
-    img.onload=()=>{const c=document.createElement('canvas');c.width=size*2;c.height=size*2;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',0.88))};
-    img.onerror=rej;img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s);
+    const sv=`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${svgFor(key,size,size,PAL.light,false)}</svg>`;
+    const img=new Image();img.onload=()=>res(img);img.onerror=rej;img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(sv);
   });
 }
 async function makePdf(){/*pdf*/
-  const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4',compress:true});
-  const PW=297,PH=210,M=12,G=[31,90,58];const meta=state.meta;
-  doc.setFont('helvetica','bold');doc.setFontSize(17);doc.setTextColor(19,39,28);doc.text('Circle maps',M,M+4);
-  doc.setFont('helvetica','normal');doc.setFontSize(10.5);doc.setTextColor(77,100,85);
-  const line=`With: ${meta.name||'-'}     Date: ${meta.date||'-'}     Time: ${meta.time||'-'}     Location: ${meta.loc||'-'}`;
-  doc.text(line,M,M+11);doc.setFontSize(9);doc.text('Energy: + gives   - takes   +/- both',PW-M,M+11,{align:'right'});doc.setFontSize(10.5);doc.setDrawColor(...G);doc.setLineWidth(0.4);doc.line(M,M+14,PW-M,M+14);
+  // Drawn on a canvas so every script (Hindi, Tamil, Urdu...) renders with the device's own fonts.
+  const S=6,PW=297,PH=210,M=12,cv=document.createElement('canvas');cv.width=PW*S;cv.height=PH*S;
+  const x=cv.getContext('2d'),F='Inter,"Noto Sans","Noto Sans Devanagari","Noto Sans Tamil","Noto Nastaliq Urdu",system-ui,sans-serif';
+  const mm=v=>v*S,font=(sz,w)=>{x.font=`${w||400} ${mm(sz)}px ${F}`};
+  const wrap=(t,maxW)=>{const out=[];String(t).split('\n').forEach(par=>{let line='';par.split(/(\s+)/).forEach(w=>{const tr=line+w;if(x.measureText(tr).width>mm(maxW)&&line.trim()){out.push(line.trim());line=w.trimStart()}else line=tr});out.push(line.trim())});return out};
+  x.fillStyle='#fff';x.fillRect(0,0,cv.width,cv.height);x.textBaseline='alphabetic';
+  const meta=state.meta;
+  font(6,700);x.fillStyle='#13271c';x.fillText('Circle maps',mm(M),mm(M+4));
+  font(3.6);x.fillStyle='#4d6455';
+  x.fillText(`With: ${meta.name||'-'}     Date: ${meta.date||'-'}     Time: ${meta.time||'-'}     Location: ${meta.loc||'-'}`,mm(M),mm(M+11));
+  font(3.1);x.textAlign='right';x.fillText('Energy: + gives   − takes   ± both',mm(PW-M),mm(M+11));x.textAlign='left';
+  x.strokeStyle='#1f5a3a';x.lineWidth=mm(0.4);x.beginPath();x.moveTo(mm(M),mm(M+14));x.lineTo(mm(PW-M),mm(M+14));x.stroke();
   const maps=active(),n=maps.length,gap=8,colW=(PW-2*M-gap*(n-1))/n,img=Math.min(colW,n===3?84:112);
   let maxY=0;
   for(let i=0;i<n;i++){
-    const d=maps[i],x=M+i*(colW+gap),y0=M+21;
-    doc.setFont('helvetica','bold');doc.setFontSize(11.5);doc.setTextColor(...G);
-    doc.text(`${i+1}. ${centreOf(d.key)} at the centre`,x,y0);
-    const png=await svgToPng(d.key,520);
-    doc.addImage(png,'JPEG',x+(colW-img)/2,y0+3,img,img,undefined,'FAST');
-    let y=y0+img+9;doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(19,39,28);
-    listText(d.key).forEach(l=>{const w=doc.splitTextToSize(l,colW);doc.text(w,x,y);y+=w.length*4.6});
+    const d=maps[i],cx=M+i*(colW+gap),y0=M+21;
+    font(4,600);x.fillStyle='#1f5a3a';
+    wrap(`${i+1}. ${centreOf(d.key)} at the centre`,colW).slice(0,1).forEach(l=>x.fillText(l,mm(cx),mm(y0)));
+    const im=await svgImage(d.key,520);x.drawImage(im,mm(cx+(colW-img)/2),mm(y0+3),mm(img),mm(img));
+    let y=y0+img+9;font(3.3);x.fillStyle='#13271c';
+    listText(d.key).forEach(l=>wrap(l,colW).forEach(w=>{x.fillText(w,mm(cx),mm(y));y+=4.6}));
     maxY=Math.max(maxY,y);
   }
   let y=Math.min(maxY+5,PH-28);
-  doc.setFont('helvetica','bold');doc.setFontSize(10.5);doc.setTextColor(...G);doc.text('What they noticed',M,y);
-  doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.setTextColor(19,39,28);
-  const nl=doc.splitTextToSize(state.notice||'-',PW-2*M);doc.text(nl.slice(0,Math.max(1,Math.floor((PH-y-8)/4.6))),M,y+5);
+  font(3.7,600);x.fillStyle='#1f5a3a';x.fillText('What they noticed',mm(M),mm(y));
+  font(3.3);x.fillStyle='#13271c';y+=5;
+  for(const l of wrap(state.notice||'-',PW-2*M)){if(y>PH-6)break;x.fillText(l,mm(M),mm(y));y+=4.6}
+  const {jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4',compress:true});
+  doc.addImage(cv.toDataURL('image/jpeg',0.9),'JPEG',0,0,PW,PH,undefined,'FAST');
+  doc.setProperties({title:`Circle maps - ${meta.name||''} - ${meta.date||''}`});
   return doc.output('blob');
 }
 const pdfBtn=document.getElementById('pdf');
